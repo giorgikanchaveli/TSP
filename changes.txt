@@ -1,0 +1,5 @@
+1) change in Est struct: initial estimates of distances are 0.521 between every different cities
+2) Params struct: we specify initial and final values of beta and number of betas  we want to use. 
+                  Then we will use linspace method to get other values of beta.
+3) sample cost function: only changed names of variables we return, e--> est, s--> obs
+4) function macau: added one for loop for beta in list of betas that are linearly spaced.
