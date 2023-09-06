@@ -1,3 +1,6 @@
+This document contains changes I made from original code 
+
+
 1) change in Est struct: initial estimates of distances are 0.521 between every different cities
 2) Params struct: we specify initial and final values of beta and number of betas  we want to use. 
                   Then we will use linspace method to get other values of beta.
