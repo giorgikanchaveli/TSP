@@ -1,2 +1,2 @@
 # TSP
-algorithms for tsp when distances aren't knowsn and are random
+algorithms for travelling salesman problem when distances aren't known and are random
