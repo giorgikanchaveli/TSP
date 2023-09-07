@@ -51,7 +51,7 @@ est_cost(c::Vector{Int}, est::Est) = tour_cost(c, est.estD)
 function sample_cost!(c::Vector{Int}, graph::Graph, est::Est)
 
     # for route c, we observe cost and update our estimated for distance and other parameters in est object
-
+    
     @extract est : N estD samples
     graph.N == N || throw(ArgumentError("incompatible graphs, graph.N=$(graph.N) est.N=$N"))
     @extract graph : N D α
@@ -116,10 +116,12 @@ function macau(;N::Integer = 10, β_start::Real = 1.0, β_final::Real = 10.0, n_
     end
 
     c = [i for i = 1:N]
-    cost = est_cost(c, est)
+    cost = est_cost(c, est) 
     sampled_cost = Inf
-
+    sampled_costs = Array{Float64}(undef, n_β*iters)
+    
     acc = 0
+    i = 1
     for β in range(β_start, β_final, n_β)
         
         acc = 0 
@@ -131,17 +133,19 @@ function macau(;N::Integer = 10, β_start::Real = 1.0, β_final::Real = 10.0, n_
                 # cost += Δcost
                 # estcost = est_cost(c, est)
                 # @assert cost ≈ estcost
-                sampled_cost, cost = sample_cost!(c, graph, est)
+                #sampled_cost, cost = sample_cost!(c, graph, est)
                 acc += 1
             end
+            sampled_cost, cost = sample_cost!(c, graph, est)
+            sampled_costs[i] = sampled_cost # new reward
+            i += 1
         end
         println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
     end
     
-
     realcost = real_cost(c, graph)
 
-    return c, cost, realcost, graph.D, est.estD
+    return c, cost, realcost, sampled_costs, graph.D, est.estD
 end
 
 end # module
