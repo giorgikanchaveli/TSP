@@ -140,12 +140,12 @@ function macau(;N::Integer = 10, β_start::Real = 1.0, β_final::Real = 10.0, n_
             sampled_costs[i] = sampled_cost # new reward
             i += 1
         end
-        println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
+        #println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
     end
     
     realcost = real_cost(c, graph)
-
-    return c, cost, realcost, sampled_costs, graph.D, est.estD
+    
+    return c, cost, realcost, sampled_costs, graph.D, est
 end
 
 end # module
