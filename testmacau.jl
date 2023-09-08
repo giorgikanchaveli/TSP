@@ -1,6 +1,7 @@
 include("Macau.jl")
 using Plots
 using LinearAlgebra
+using ExtractMacro
 
 
 # cost is cost based on our estimated distance matrix
@@ -27,24 +28,27 @@ most_explored = function(s::Matrix{Int64}) # most explored link and it's value (
     return index.I, s[index]
 end
 
-est_distance = function(;N::Int = 10, α::Float64 = 0.0, β_start::Float64 = 1.0, β_final::Float64 = 10.0, n_β::Int = 20, iters::Int = 10)
-    d = 0.0
+est_distance = function(;N::Int = 10, α::Float64 = 0.0, params::Macau.Params = Macau.Params(1.0,10.0,100,10, false), iters)
+    d = 0.0  
     for i in range(1, iters)
-        c, cost, realcost, sampled_costs, true_d,est = Macau.macau(N = N, α = α,β_start = β_start, β_final = β_final, n_β = n_β)
+        c, cost, realcost, sampled_costs, true_d, est = Macau.macau(N = N, α = α,params = params)
         d += distance(est.estD, true_d)
+        
     end
-    print("cost of route is $realcost")
-    return d / iters 
+    
+    return d / params.iters 
 end
 
-regret = function(;N::Integer = 10, β_start::Real = 1.0, β_final::Real = 10.0, n_β::Int = 100,
-    α::Real = 0.0, iters = 10_000, seed::Int = 716464734)
-    c0, cost0, realcost0, sampled_costs0, true_d0, est0 = Macau.macau(N = N,β_start = β_start,β_final = β_final,n_β = n_β,α = α,iters = iters, seed = seed)
-    c0, cost1, realcost1, sampled_costs1, true_d1, est1 = Macau.macau(N = N,β_start = β_start,β_final = β_final,n_β = n_β,α = 0.0,iters = iters, seed = seed)
+regret = function(;N::Integer = 10, α::Real = 0.0, 
+                  params::Macau.Params = Macau.Params(1.0,10.0,100,10, false), seed::Int = 716464734)
+    c0, cost0, realcost0, sampled_costs0, true_d0, est0 = Macau.macau(N = N, α = α, params = params, seed = seed)
+    c0, cost1, realcost1, sampled_costs1, true_d1, est1 = Macau.macau(N = N, α = 0.0, params = params, seed = seed)
     return (realcost0 - realcost1)
 end
 
 
 start_time = time()
-est_distance(N = 50, α= 0.25, β_start = 0.0, β_final = 100.1, n_β = 250, iters = 5)
+par = Macau.Params(0.0, 15.0, 100, 500, true)
+est_distance(N = 50, α= 0.25,params = par, iters = 3)
 print("time elapsed = $(time() - start_time)")
+regret(α = 0.25)

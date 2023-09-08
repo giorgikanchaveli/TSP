@@ -29,10 +29,12 @@ mutable struct Est    # encapsulates all useful quantities for inference
                                                             # zeros MIGHT BE CHANGED
 end
 
-mutable struct Params
+mutable struct Params # parameters for the algorithm
     β_start::Float64 # first beta we choose
     β_final::Float64 # last beta we choose
     n_β::Int  # number of betas we want to have
+    iters::Int # number of iterations per beta
+    show::Bool # if true, you want to print some useful infos
 end
 
 function tour_cost(c::Vector{Int}, D::Matrix)
@@ -105,11 +107,17 @@ function accept_move!(c::Vector{Int}, move::Tuple{Int,Int})
     return c
 end
 
-function macau(;N::Integer = 10, β_start::Real = 1.0, β_final::Real = 10.0, n_β::Integer = 100,
-               α::Real = 0.0, iters = 10_000, seed::Int = 716464734, initreal::Bool = false)
+
+# might change so that macau receives graph object
+function macau(;N::Integer = 10, params::Params = Params(1.0,10.0,100, 10000, false),
+               α::Real = 0.0, seed::Int = 716464734, initreal::Bool = false)
     Random.seed!(seed)
     graph = Graph(N, α)
     est = Est(N)
+
+
+    @extract params : β_start β_final n_β iters show
+    
 
     if initreal
         copyto!(est.estD, graph.D)
@@ -140,7 +148,9 @@ function macau(;N::Integer = 10, β_start::Real = 1.0, β_final::Real = 10.0, n_
             sampled_costs[i] = sampled_cost # new reward
             i += 1
         end
-        #println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
+        if show
+            println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
+        end
     end
     
     realcost = real_cost(c, graph)
