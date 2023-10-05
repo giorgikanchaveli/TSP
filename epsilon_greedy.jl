@@ -110,7 +110,8 @@ end
 best_moves = function(c::Vector{Int}, moves, d::Matrix{Float64}) # given current route and distance matrix, returns move
                                                                  # that minimizes cost of each possible route
     costs = delta_costs(c, moves, d)
-    return moves[argmax(costs)]
+
+    return moves[argmin(costs)]
 end
 
 
