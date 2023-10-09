@@ -21,9 +21,10 @@ end
 mutable struct Est # object that encapsulates all the variables of interest for inference
     N::Int
     estD::Matrix{Float64}  # 
+    route::Vector{Int}
     samples::Matrix{Int}   # matrix that counts for each edge how many times we choose
                            # if we initialize it to 0 then initial estimates of Distance don't matter
-    Est(N) = new(N, 0.521*(ones(N, N) - I), zeros(Int, N, N)) # 0.521 is expected distance between two points
+    Est(N) = new(N, 0.521*(ones(N, N) - I),[i for i=1:N], zeros(Int, N, N)) # 0.521 is expected distance between two points
                                                         # chosen uniformly in [0,1]^2 
                                                         # zeros MIGHT BE CHANGED because in this case 
                                                         # initial values for estimated distance don't matter once we observe
@@ -36,6 +37,21 @@ mutable struct Params # parameters for the algorithm
     ϵ::Float64 # probability of choosing random route
     iters::Int # number of iterations 
 end
+
+
+function tour_cost(c::Vector{Int}, D::Matrix)
+    # c is permutation vector that represents route
+    N = length(c)
+    @assert size(D) == (N,N)
+    cost = sum(D[c[i],c[i+1]] for i = 1:N-1)
+    cost += D[c[N],c[1]]
+    return cost
+end
+
+
+
+real_cost(c::Vector{Int}, graph::Graph) = tour_cost(c, graph.D)
+
 
 possible_moves = function(N::Int) # Given number of Cities, returns list of acceptible moves which are
                                   # tuple of cities that define links to be swapped.
@@ -130,7 +146,7 @@ end
 
 
 eps_greedy = function(;N::Integer = 10, params::Params = Params(0.0, 100),
-    α::Real = 0.0, seed::Int = 716464734, initreal::Bool = false)
+    α::Float64 = 0.0, seed::Int = 716464734, initreal::Bool = false)
     Random.seed!(seed)
     graph = Graph(N,α)
     moves = possible_moves(N)
@@ -142,7 +158,7 @@ eps_greedy = function(;N::Integer = 10, params::Params = Params(0.0, 100),
 
     @extract params : ϵ iters
 
-    c = [i for i = 1:N]
+    c = est.route
 
     sampled_costs = Array{Float64}(undef, iters) # observed costs accumulated for each iteration
 
@@ -161,10 +177,15 @@ eps_greedy = function(;N::Integer = 10, params::Params = Params(0.0, 100),
         sampled_costs[i] = sampled_cost # new reward
     end
 
-    return graph, est, sampled_costs
+    realcost = real_cost(c, graph)
+
+    return graph, est, sampled_costs, realcost
 end
 
 
 
 
 end
+
+
+

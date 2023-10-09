@@ -21,10 +21,11 @@ end
 mutable struct Est    # encapsulates all useful quantities for inference
     N::Int
     estD::Matrix{Float64}  # 
+    route::Vector{Int}
     samples::Matrix{Int}   # matrix that counts for each edge how many times we choose
                            # if we initialize it to 0 then initial estimates of Distance don't matter
             
-    Est(N) = new(N, 0.521*(ones(N, N) - I), zeros(Int, N, N))  # 0.521 is expected distance between two points
+    Est(N) = new(N, 0.521*(ones(N, N) - I), [i for i = 1:N], zeros(Int, N, N))  # 0.521 is expected distance between two points
                                                                # chosen uniformly in [0,1]^2 
                                                             # zeros MIGHT BE CHANGED
 end
@@ -123,7 +124,7 @@ function macau(;N::Integer = 10, params::Params = Params(1.0,10.0,100, 10000, fa
         copyto!(est.estD, graph.D)
     end
 
-    c = [i for i = 1:N]
+    c = est.route
     cost = est_cost(c, est) 
     sampled_cost = Inf
     sampled_costs = Array{Float64}(undef, n_β*iters)
@@ -135,7 +136,7 @@ function macau(;N::Integer = 10, params::Params = Params(1.0,10.0,100, 10000, fa
         acc = 0 
         for iter = 1:iters
             Δcost, move = propose_move(c, est)
-
+           # println("prob = $(exp(-β * Δcost))")
             if Δcost ≤ 0 || rand() < exp(-β * Δcost)
                 accept_move!(c, move)
                 # cost += Δcost
@@ -155,7 +156,7 @@ function macau(;N::Integer = 10, params::Params = Params(1.0,10.0,100, 10000, fa
     
     realcost = real_cost(c, graph)
     
-    return c, cost, realcost, sampled_costs, graph.D, est
+    return graph, est, sampled_costs, realcost
 end
 
 end # module
