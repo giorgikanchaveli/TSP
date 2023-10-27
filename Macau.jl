@@ -6,15 +6,16 @@ using ExtractMacro
 struct Graph   # TSP problem
     N::Int
     D::Matrix{Float64} 
+    coords::Tuple{Vector{Float64}, Vector{Float64}}
     α::Float64   # this parameter is used to generate reward, that is distance + α * unif()
     function Graph(N, α)
         N > 0 || throw(ArgumentError("N must be positive, given: $N"))
         α ≥ 0 || throw(ArgumentError("α must be non-negative, given: $N"))
 
         x, y = rand(N), rand(N) 
-
+        coords = (x,y)
         D = [√((x[i]-x[j])^2 + (y[i]-y[j])^2) for i = 1:N, j = 1:N]
-        return new(N, D, α)
+        return new(N, D, coords, α)
     end
 end
 
@@ -57,7 +58,7 @@ function sample_cost!(c::Vector{Int}, graph::Graph, est::Est)
     
     @extract est : N estD samples
     graph.N == N || throw(ArgumentError("incompatible graphs, graph.N=$(graph.N) est.N=$N"))
-    @extract graph : N D α
+    @extract graph : N D coords α
  
     est_cost = 0.0 # estimated cost of route based on our estimated distance after updating it 
     obs_cost = 0.0 # observed cost of route. This will be reward for that route
