@@ -19,6 +19,10 @@ struct Graph   # TSP problem
     end
 end
 
+function field_names(x::Graph)
+    ["N","D","coords","α"]
+end
+
 mutable struct Est    # encapsulates all useful quantities for inference
     N::Int
     estD::Matrix{Float64}  # 
@@ -30,14 +34,32 @@ mutable struct Est    # encapsulates all useful quantities for inference
                                                                # chosen uniformly in [0,1]^2 
                                                             # zeros MIGHT BE CHANGED
 end
+function field_names(x::Est)
+    ["N", "estD", "route", "samples"]
+end
 
-mutable struct Params # parameters for the algorithm
+
+
+# I distinguish paramaters that are hyperparameters for simulated annealing (like betas) and rest of the parameters like number of mcmc iterations...
+mutable struct hyperparams # parameters for the algorithm
     β_start::Float64 # first beta we choose
     β_final::Float64 # last beta we choose
     n_β::Int  # number of betas we want to have
+end
+
+mutable struct params
     iters::Int # number of iterations per beta
     show::Bool # if true, you want to print some useful infos
 end
+
+function field_names(x::hyperparams)
+    ["β_start", "β_final", "n_β"]
+end
+
+function field_names(x::params)
+    ["iters", "show"]
+end
+
 
 function tour_cost(c::Vector{Int}, D::Matrix)
     # c is permutation vector that represents route
@@ -111,14 +133,17 @@ end
 
 
 # might change so that macau receives graph object
-function macau(;N::Integer = 10, params::Params = Params(1.0,10.0,100, 10000, false),
-               α::Real = 0.0, seed::Int = 716464734, initreal::Bool = false)
+# it receives input to construct data, input for hyperparameters, and rest of the parameters
+
+function macau(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyperparams(1.0, 10.0, 100), params::params = params(10, false),
+                seed::Int = 716464734, initreal::Bool = false)
     Random.seed!(seed)
     graph = Graph(N, α)
     est = Est(N)
 
 
-    @extract params : β_start β_final n_β iters show
+    @extract hyperparams : β_start β_final n_β
+    @extract params :  iters show
     
 
     if initreal
@@ -159,6 +184,118 @@ function macau(;N::Integer = 10, params::Params = Params(1.0,10.0,100, 10000, fa
     
     return graph, est, sampled_costs, realcost
 end
+
+
+
+
+
+function macau(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyperparams(1.0, 10.0, 100), params::params = params(2000, false),
+                seed::Int = 716464734, initreal::Bool = false)
+    Random.seed!(seed)
+    graph = Graph(N, α)
+    est = Est(N)
+
+
+    @extract hyperparams : β_start β_final n_β
+    @extract params :  iters show
+    
+
+    if initreal
+        copyto!(est.estD, graph.D)
+    end
+
+    c = est.route
+    cost = est_cost(c, est) 
+    sampled_cost = Inf
+    sampled_costs = Array{Float64}(undef, n_β*iters)
+    
+    acc = 0
+    i = 1
+    for β in range(β_start, β_final, n_β)
+        
+        acc = 0 
+        for iter = 1:iters
+            Δcost, move = propose_move(c, est)
+           # println("prob = $(exp(-β * Δcost))")
+            if Δcost ≤ 0 || rand() < exp(-β * Δcost)
+                accept_move!(c, move)
+                # cost += Δcost
+                # estcost = est_cost(c, est)
+                # @assert cost ≈ estcost
+                #sampled_cost, cost = sample_cost!(c, graph, est)
+                acc += 1
+            end
+            sampled_cost, cost = sample_cost!(c, graph, est)
+            sampled_costs[i] = sampled_cost # new reward
+            i += 1
+        end
+        if show
+            println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
+        end
+    end
+    
+    realcost = real_cost(c, graph)
+    
+    return graph, est, sampled_costs, realcost
+end
+
+
+# this function is used for optimizing beta. Intead of running mh algorithm for each beta in some range of betas, we run 1 iteration for each beta in range
+# (β_min, β_max) with very little increment for beta.
+function macau2(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyperparams(1.0, 10.0, 0.0001), params::params = params(10, false),
+    seed::Int = 716464734, initreal::Bool = false)
+
+    Random.seed!(seed)
+    graph = Graph(N, α)
+    est = Est(N)
+
+
+    @extract hyperparams : β_start β_final n_β
+    @extract params :  iters show
+
+
+    if initreal
+    copyto!(est.estD, graph.D)
+    end
+
+    c = est.route
+    cost = est_cost(c, est) 
+    sampled_cost = Inf
+    sampled_costs = Array{Float64}(undef, n_β*iters)
+
+    acc = 0
+    i = 1
+    for β in range(β_start, β_final, n_β)
+
+        acc = 0 
+        for iter = 1:iters
+            Δcost, move = propose_move(c, est)
+            # println("prob = $(exp(-β * Δcost))")
+            if Δcost ≤ 0 || rand() < exp(-β * Δcost)
+                accept_move!(c, move)
+                # cost += Δcost
+                # estcost = est_cost(c, est)
+                # @assert cost ≈ estcost
+                #sampled_cost, cost = sample_cost!(c, graph, est)
+                acc += 1
+            end
+            sampled_cost, cost = sample_cost!(c, graph, est)
+            sampled_costs[i] = sampled_cost # new reward
+            i += 1
+        end
+        if show
+        println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
+        end
+    end
+
+    realcost = real_cost(c, graph)
+
+    return graph, est, sampled_costs, realcost
+end
+
+
+
+
 
 end # module
 

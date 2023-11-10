@@ -98,17 +98,57 @@ test_d_rewards = function(N::Int, param_eps::epsilon_greedy.Params, param_macau:
 
     plots = plot(rewards, cum_rewards, layout = (1,2))
 
-    display(plots)
 
+    #plots = plot(rewards, cum_rewards, layout = (1,2))
 
+    #display(plots)
+
+    return (graph, est_eps.route, est_macau.route, plots)
 
 end
+
+
+plot_route = function(graph::Macau.Graph, r::Vector{Int})
+    coords = graph.coords # tuple of vectors
+
+    cities_x = [city_x for city_x in coords[1]]
+    cities_y = [city_y for city_y in coords[2]]
+    push!(r, r[1])
+    tour_x = [city_x for city_x in coords[1][r]]
+    tour_y = [city_y for city_y in coords[2][r]]
+
+    # Plot the cities
+    scatter(cities_x, cities_y, label="Cities")
+
+# Plot the TSP tour
+    plot!(tour_x, tour_y, label="Route", line=:arrow, legend = false)
+    
+    annotate!([(tour_x[1], tour_y[1] + 0.04, text(string(1)))])
+    annotate!([(tour_x[2], tour_y[2] + 0.04, text(string(2)))])
+    annotate!([(tour_x[graph.N], tour_y[graph.N] + 0.02, text(string(graph.N)))])
+# Add labels to the cities
+#    for (i, (x, y)) in enumerate(coords)
+#        annotate!([(x, y + 0.02, text(string(i)))])
+#    end
+
+# Set plot attributes
+    xlabel!("X")
+    ylabel!("Y")
+    title!("Traveling Salesman Problem")
+    
+end
+
+
+
+
+
+
 
 
 # α = 0.0 and distance is known
 
 seed = 134241
-N = 100
+N = 200
 α = 0.0
 
 # parameters for eps_greedy
@@ -139,7 +179,7 @@ param_macau = Macau.Params(β_0, β_1, n_β, mcmc_iter, show)
 # α = 0.2 and distance is unknown
 
 seed = 134241
-N = 100
+N = 200
 α = 0.2
 
 # parameters for eps_greedy
@@ -163,6 +203,32 @@ param_macau = Macau.Params(β_0, β_1, n_β, mcmc_iter, show)
 
 
 
-test_d_rewards(N, param_eps, param_macau, α, seed, initreal)
+graph, r_eps, r_macau, plots_rewards = test_d_rewards(N, param_eps, param_macau, α, seed, initreal)
 
+# convert route of macau so that epsilon and macau start at the same city
+
+# find index of first city in epsilon route in macau's route
+first_city = r_eps[1]
+index_first_city = collect(1:graph.N)[r_macau .== first_city][1]
+r_macau[1:graph.N - index_first_city+1], r_macau[graph.N - index_first_city+2:graph.N] = r_macau[index_first_city:graph.N], r_macau[1:index_first_city-1]
+
+
+
+
+pl_eps = plot_route(graph, r_eps)
+title!(pl_eps, "epsilon greedy")
+
+pl_macau = plot_route(graph, r_macau)
+title!(pl_macau, "macau")
+
+
+plot!(pl_eps, size=(800, 600))
+plot!(pl_macau, size=(800, 600))
+
+
+
+plots_routes = plot(pl_eps, pl_macau, layout = (1,2))
+plots = plot(plots_rewards, plots_routes, layout = (2,1))
+
+display(plots)
 
