@@ -242,7 +242,7 @@ end
 
 # this function is used for optimizing beta. Intead of running mh algorithm for each beta in some range of betas, we run 1 iteration for each beta in range
 # (β_min, β_max) with very little increment for beta.
-function macau2(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyperparams(1.0, 10.0, 0.0001), params::params = params(10, false),
+function macau2(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyperparams(1.0, 10.0,100), params::params = params(10, false),
     seed::Int = 716464734, initreal::Bool = false)
 
     Random.seed!(seed)
@@ -251,6 +251,10 @@ function macau2(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyp
 
 
     @extract hyperparams : β_start β_final n_β
+    # in this case n_β represents step size for beta , i.e. β(i) = β_start + n_β * i\
+
+    step_size = 1e-2
+    β_s = collect(β_start:step_size:β_final)
     @extract params :  iters show
 
 
@@ -261,36 +265,34 @@ function macau2(;N::Integer = 10, α::Real = 0.0, hyperparams::hyperparams = hyp
     c = est.route
     cost = est_cost(c, est) 
     sampled_cost = Inf
-    sampled_costs = Array{Float64}(undef, n_β*iters)
+    sampled_costs = []
 
-    acc = 0
+    acc = 1.0
     i = 1
-    for β in range(β_start, β_final, n_β)
 
-        acc = 0 
-        for iter = 1:iters
-            Δcost, move = propose_move(c, est)
+    for β in β_s
+        Δcost, move = propose_move(c, est)
             # println("prob = $(exp(-β * Δcost))")
-            if Δcost ≤ 0 || rand() < exp(-β * Δcost)
-                accept_move!(c, move)
-                # cost += Δcost
-                # estcost = est_cost(c, est)
-                # @assert cost ≈ estcost
-                #sampled_cost, cost = sample_cost!(c, graph, est)
-                acc += 1
-            end
-            sampled_cost, cost = sample_cost!(c, graph, est)
-            sampled_costs[i] = sampled_cost # new reward
-            i += 1
+        if Δcost ≤ 0 || rand() < exp(-β * Δcost)
+            accept_move!(c, move)
+            # cost += Δcost
+            # estcost = est_cost(c, est)
+            # @assert cost ≈ estcost
+            #sampled_cost, cost = sample_cost!(c, graph, est)
+            acc = acc * 0.99 + 0.01
+        else
+            acc *= 0.99
         end
-        if show
-        println("β=$β, acc=$(acc/iters),est_cost=$cost, sampled_cost=$sampled_cost")
-        end
+
+        sampled_cost, cost = sample_cost!(c, graph, est)
+        push!(sampled_costs,sampled_cost) # new reward
+        i += 1
+            
     end
 
     realcost = real_cost(c, graph)
 
-    return graph, est, sampled_costs, realcost
+    return graph, est, sampled_costs, realcost, acc
 end
 
 

@@ -8,13 +8,13 @@ import .Macau: macau
 using Statistics
 
 
-hyperparameters = Macau.hyperparams(1.0,5.0,50)
-graph, est, sampled_costs, realcost = macau(hyperparams = hyperparameters)
+#hyperparameters = Macau.hyperparams(1.0,5.0,50)
+#graph, est, sampled_costs, realcost = macau(hyperparams = hyperparameters)
 
 # range for each of the hyperparameters
-β_start_min, β_start_max, n_start = 0.00001, 100.0, 5 # n_start is number of β_start we consider in that range 
-β_end_min, β_end_max, n_final = 0.1, 1000.0, 5  # n_final is number of β_end we consider in that range 
-n_β_min, n_β_max, nn = 100, 100, 1 # nn is number of n_β we consider in that range 
+β_start_min, β_start_max, n_start = 0.00, 200.0, 10 # n_start is number of β_start we consider in that range 
+β_end_min, β_end_max, n_final = 0.1, 1000.0, 10  # n_final is number of β_end we consider in that range 
+n_β_min, n_β_max, nn = 20, 300, 8 # nn is number of n_β we consider in that range 
 
 # from ranges construct vectors for hyperparameters
 β_starts = collect(range(β_start_min, β_start_max, n_start))
@@ -28,7 +28,8 @@ n_simulate = 10 # number of times we want to simulate data for each hyperparamet
 
 
 
-cost_macau = function(;N::Int = N, α::Float64 = α, hyperparams::Macau.hyperparams = hyperparameters, seed::Int = 1)
+cost_macau = function(;N::Int = N, α::Float64 = α, hyperparams::Macau.hyperparams, seed::Int = 1)
+    
     _, _, costs, _ = macau(N = N, α = α, hyperparams = hyperparams, seed = seed)
     return mean(costs)
 end
@@ -49,6 +50,8 @@ optimize_hypparmac = function(β_starts::Vector{Float64}, β_ends::Vector{Float6
     seeds = rand(10:10000, sim) # for each of the parameter we want to generate same graphs because
                                 # this way best hyperparameter won't be biased towards the seeds that where  
                                 # generated for that hyperparameter.
+    iter = 0
+    println("need to do $(length(β_starts)*length(β_ends)*length(n_βs))")
     for i in 1:len1
         for j in 1:len2
             for k in 1:len3
@@ -77,7 +80,12 @@ optimize_hypparmac = function(β_starts::Vector{Float64}, β_ends::Vector{Float6
                         best_params = (i,j,k)
                     end
                 end
-                print("time for one pair of hyperparameters is $(time() - t)")
+                #print("time for one pair of hyperparameters is $(time() - t)")
+                if iter % 10 ==0
+                    println("iter : $(iter)")
+                end
+                iter += 1
+
             end
         end
     end
@@ -100,7 +108,7 @@ elapsed = time() - t
 
 
 
-
-print(β_starts[best_params[1]])
-print(β_ends[best_params[2]])
-print(n_βs[best_params[3]])
+println("time needed :$(elapsed ÷ 60) minutes and $(elapsed - elapsed ÷ 60) seconds")
+println(β_starts[best_params[1]])
+println(β_ends[best_params[2]])
+println(n_βs[best_params[3]])
